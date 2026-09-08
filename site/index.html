@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>UUUU Option Surface Lab</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="data.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 2.5rem 3rem;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: radial-gradient(circle at top left, #151a30, #0b0e1a 60%);
+    color: #e8e6f0;
+  }
+  h1 {
+    font-family: 'Georgia', serif; font-weight: 700; letter-spacing: 0.5px;
+    color: #f5a623; margin: 0 0 0.25rem 0; font-size: 1.9rem;
+  }
+  .sub { color: #9791b3; margin: 0 0 1.5rem 0; font-size: 0.95rem; }
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: center;
+    background: #12172a; border: 1px solid #232a45; border-radius: 12px;
+    padding: 1rem 1.25rem; margin-bottom: 1.5rem;
+  }
+  .controls label { color: #9791b3; font-size: 0.85rem; margin-right: 0.4rem; }
+  select, input[type=range] {
+    background: #0b0e1a; color: #e8e6f0; border: 1px solid #232a45;
+    border-radius: 6px; padding: 0.3rem 0.6rem;
+  }
+  .toggle { display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; color: #cfc9e0; }
+  .stats-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  .stat-card {
+    background: #12172a; border: 1px solid #232a45; border-radius: 12px;
+    padding: 1rem 1.4rem; min-width: 11rem;
+  }
+  .stat-card .lbl { color: #9791b3; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-card .val { color: #f5a623; font-size: 1.6rem; font-weight: 700; margin-top: 0.2rem; }
+  .panel {
+    background: #12172a; border: 1px solid #232a45; border-radius: 12px;
+    padding: 1rem; margin-bottom: 1.5rem;
+  }
+  .commentary {
+    background: #12172a; border: 1px solid #232a45; border-radius: 12px;
+    padding: 1.25rem 1.5rem; line-height: 1.6; color: #cfc9e0; font-size: 0.95rem;
+  }
+  .commentary strong { color: #f5a623; }
+  .legend-note { color: #9791b3; font-size: 0.85rem; margin: 0.5rem 0 1rem 0; }
+  .legend-note .mid { color: #f5a623; font-weight: 600; }
+  .legend-note .trd { color: #ff5d73; font-weight: 600; }
+  .legend-note .sheet { color: #7c5cff; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>UUUU &middot; OPTION SURFACE LAB</h1>
+<p class="sub">Static snapshot &mdash; 12-week window of expired UUUU option contracts, no live LSEG connection.</p>
+
+<div class="panel"><div id="fig_stock" style="height:360px"></div></div>
+
+<div class="controls">
+  <div><label>As-of date</label><select id="asof"></select></div>
+  <div><label>Right</label>
+    <select id="right"><option value="C">Calls</option><option value="P">Puts</option></select>
+  </div>
+  <label class="toggle"><input type="checkbox" id="show_sheet"/> Interpolated sheet</label>
+</div>
+
+<p class="legend-note">
+  <span class="mid">Amber</span> = MID_PRICE, the closing NBBO midpoint &mdash; exists on far more series than trades.
+  <span class="trd">Coral diamonds</span> = TRDPRC_1, an actual print &mdash; sparse by nature.
+  <span class="sheet">Violet sheet</span> (off by default) is a linear interpolation across the amber cloud:
+  it invents a price at every strike/expiry combination whether or not one ever printed.
+</p>
+
+<div class="stats-row" id="stats"></div>
+
+<div class="panel"><div id="fig_surface" style="height:620px"></div></div>
+<div class="panel"><div id="fig_compare" style="height:420px"></div></div>
+
+<div class="commentary">
+  <p><strong>Where is the data dense vs. empty?</strong> We can see that the data is most dense near the spot-price plane, so where the strike is close to what the stock was trading on that given day. As we move further away in either diretion it thins out. Something worth mentioning is that the +-35% strike band used when searching the data caused some emptiness when close to expiry and high strike price, as well as far out of expiry with low strike price</p>
+  <p><strong>Why is interpolating across empty cells dangerous here?</strong> Lets's say for example, that we have a real price at strike $10 and another real price at strike $12, but nothing at $11. Interpolating is drawing a straight line between the 2 known points and picking whatever value sits on that line at 11$. Nobody actually traded at $11, the chart is showing us this guess. I also wanted to test how accurate the interpolations made are. I took prices I know are real, hid them once, and asked to guess the interpolation only using surrounding points. The results show that half the guesses were off by $0.03, and the 90th percentile off by $0.09.But the bigger issue is not the accuracy; it's that you can't tell what is interpolated by looking at the chart. This is dangerous given that you are not using data that actually happened in the market. This could lead to wrong analysis/interpretations.</p>
+  <p><strong>Mark vs. evidence of a trade going forward:</strong> I would treat the mark as the mid price. Given that this is the one that exists basically every day (93% of my rows have one). On the other hand, TRDPRICE_1 is only 71% of my rows). And we saw earlier that they are only 3.5 cents apart on a median day. So, the mid is a reasonable stand-in for what people actually pay, when we can check it.We can think of TRDPRICE_1 as our sanity check when on the days that it is available.</p>
+</div>
+
+<script>
+const D = window.SURFACE_LAB;
+const $ = (id) => document.getElementById(id);
+
+function statCard(label, value) {
+  return `<div class="stat-card"><div class="lbl">${label}</div><div class="val">${value}</div></div>`;
+}
+
+function fmtPct(x) { return (x === null || x === undefined || Number.isNaN(x)) ? "n/a" : x.toFixed(1) + "%"; }
+function fmtNum(x) { return (x === null || x === undefined || Number.isNaN(x)) ? "n/a" : x.toFixed(3); }
+
+function populateDateDropdown() {
+  const sel = $("asof");
+  sel.innerHTML = D.dates.map(d => `<option value="${d}">${d}</option>`).join("");
+  sel.value = D.default_asof;
+}
+
+function render() {
+  const asof = $("asof").value;
+  const right = $("right").value;
+  const key = asof + "|" + right;
+  const panel = D.panels[key];
+  const showSheet = $("show_sheet").checked;
+
+  const g = D.global_stats;
+  const day = panel ? panel.day_stats : null;
+  $("stats").innerHTML = [
+    statCard("Underlying", D.ticker),
+    statCard("Window mid, no trade", fmtPct(g.pct_mid_no_trade)),
+    statCard("Window median |mid-trade|", fmtNum(g.median_abs_diff)),
+    statCard("This date, no trade", day ? fmtPct(day.pct_mid_no_trade) : "n/a"),
+    statCard("This date, median |mid-trade|", day ? fmtNum(day.median_abs_diff) : "n/a"),
+  ].join("");
+
+  if (!panel) return;
+  const surfaceFig = showSheet ? panel.surface_sheet : panel.surface_plain;
+  Plotly.react("fig_surface", surfaceFig.data, surfaceFig.layout, {responsive: true, displaylogo: false});
+  Plotly.react("fig_compare", panel.compare.data, panel.compare.layout, {responsive: true, displaylogo: false});
+}
+
+populateDateDropdown();
+["asof", "right", "show_sheet"].forEach(id => $(id).addEventListener("change", render));
+Plotly.newPlot("fig_stock", D.stock_candles.data, D.stock_candles.layout, {responsive: true, displaylogo: false});
+render();
+</script>
+</body>
+</html>
