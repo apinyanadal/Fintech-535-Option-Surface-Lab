@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>AAPL Covered Call Book</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="book.js"></script>
+<style>
+  :root { color-scheme: dark; --amber:#f5a623; --coral:#ff5d73; --violet:#7c5cff; --green:#3ddc97; --blue:#6ea8fe;
+          --panel:#12172a; --line:#232a45; --mute:#9791b3; --soft:#cfc9e0; --txt:#e8e6f0; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:2.5rem 3rem; font-family:'Segoe UI', system-ui, sans-serif;
+         background: radial-gradient(circle at top left, #151a30, #0b0e1a 60%); background-attachment: fixed; color:var(--txt); }
+  h1 { font-family:'Georgia', serif; font-weight:700; letter-spacing:.5px; color:var(--amber); margin:0 0 .25rem 0; font-size:1.9rem; }
+  h2 { font-family:'Georgia', serif; color:var(--amber); font-size:1.25rem; margin:2.2rem 0 .4rem 0; }
+  .eyebrow { color:var(--mute); font-size:.78rem; text-transform:uppercase; letter-spacing:.6px; margin-top:2.2rem; }
+  .sub { color:var(--mute); margin:0 0 1rem 0; font-size:.95rem; }
+  nav a { color:var(--soft); margin-right:1.2rem; font-size:.9rem; text-decoration:none; border-bottom:1px solid var(--line); }
+  nav a:hover { color:var(--amber); }
+  .banner { background:#3b1219; border:1px solid var(--coral); color:#ffd7dc; border-radius:10px; padding:.8rem 1.1rem; margin:1rem 0; font-weight:600; }
+  .stats-row { display:flex; gap:1rem; flex-wrap:wrap; margin:1.2rem 0 1.5rem 0; }
+  .stat-card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:1rem 1.4rem; min-width:11rem; }
+  .stat-card .lbl { color:var(--mute); font-size:.78rem; text-transform:uppercase; letter-spacing:.5px; }
+  .stat-card .val { color:var(--amber); font-size:1.6rem; font-weight:700; margin-top:.2rem; }
+  .stat-card .sub2 { color:var(--mute); font-size:.78rem; margin-top:.15rem; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:1rem; margin-bottom:1.5rem; }
+  .note { color:var(--mute); font-size:.85rem; margin:.3rem 0 .9rem 0; line-height:1.5; }
+  .note b { color:var(--soft); }
+  .rules { display:grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap:1rem; }
+  .rule { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:.9rem 1.1rem; }
+  .rule .rid { color:var(--amber); font-weight:700; font-family:Consolas, monospace; }
+  .rule .rt { font-weight:600; margin-left:.4rem; }
+  .rule p { color:var(--soft); font-size:.88rem; line-height:1.5; margin:.4rem 0 0 0; }
+  .tablewrap { background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:auto; max-height:560px; }
+  table { border-collapse:collapse; width:100%; font-size:.82rem; }
+  th { position:sticky; top:0; background:#0f1426; color:var(--mute); text-transform:uppercase; font-size:.7rem; letter-spacing:.5px;
+       text-align:left; padding:.6rem .7rem; border-bottom:1px solid var(--line); white-space:nowrap; z-index:1; }
+  td { padding:.45rem .7rem; border-bottom:1px solid #1a2038; vertical-align:top; color:var(--soft); }
+  td.num, th.num { text-align:right; font-family:Consolas, 'Courier New', monospace; white-space:nowrap; }
+  tr:hover td { background:#161c33; }
+  .sub-ric { color:var(--mute); font-size:.72rem; font-family:Consolas, monospace; }
+  .ric { font-family:Consolas, monospace; color:var(--txt); }
+  .badge { display:inline-block; padding:.1rem .55rem; border-radius:999px; font-size:.72rem; font-weight:700; letter-spacing:.4px; }
+  .b-BUY { background:rgba(61,220,151,.15); color:var(--green); }
+  .b-SELL { background:rgba(245,166,35,.16); color:var(--amber); }
+  .b-EXPIRE { background:rgba(110,168,254,.16); color:var(--blue); }
+  .b-ASSIGN { background:rgba(255,93,115,.16); color:var(--coral); }
+  .b-SKIPPED { background:rgba(151,145,179,.16); color:var(--mute); }
+  .pos { color:var(--green); } .neg { color:var(--coral); } .mute { color:var(--mute); }
+  .notecell { max-width:520px; line-height:1.4; }
+  .commentary { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:1.25rem 1.5rem; line-height:1.6; color:var(--soft); font-size:.95rem; }
+  .commentary strong { color:var(--amber); }
+  .commentary p { margin:.2rem 0 1rem 0; }
+  .todo { border:1px dashed var(--amber); color:var(--amber); border-radius:8px; padding:.5rem .8rem; font-style:italic; }
+  ul.facts { color:var(--soft); font-size:.9rem; line-height:1.6; padding-left:1.2rem; }
+  ul.facts li { margin-bottom:.35rem; }
+  details { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:.8rem 1.1rem; }
+  summary { cursor:pointer; color:var(--amber); font-weight:600; }
+  .chk { font-size:.85rem; margin:.35rem 0; color:var(--soft); }
+  .footer { color:var(--mute); font-size:.78rem; margin-top:2.5rem; }
+  .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem; }
+  @media (max-width: 1000px) { body { padding:1.2rem; } .grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<h1 id="title"></h1>
+<p class="sub" id="subtitle"></p>
+<nav><a href="index.html">Book</a><a href="data.html">Data</a></nav>
+<div id="banner"></div>
+<div class="stats-row" id="cards"></div>
+
+<div class="eyebrow">Strategy</div>
+<h2>Rules (frozen before the backtest was run)</h2>
+<div class="rules" id="rules"></div>
+
+<div class="eyebrow">Account</div>
+<h2>NAV and Reg T margin</h2>
+<p class="note">NAV, initial margin (50% of stock LMV) and maintenance margin (25% of stock LMV), one point per session close. Hover for cash, shares,
+  short call and available funds. Dotted line: owning 100 shares from the first purchase with the same starting equity and no calls.</p>
+<div class="panel"><div id="fig_nav" style="height:430px"></div></div>
+<div class="panel"><div id="fig_avail" style="height:280px"></div></div>
+
+<div class="eyebrow">Tape</div>
+<h2>Stock and the strikes I sold</h2>
+<p class="note">Hourly last print of the stock. Each horizontal bar is one short call from entry to settlement at its strike:
+  <b style="color:#3ddc97">green = expired</b>, <b style="color:#ff5d73">coral = assigned</b>.</p>
+<div class="panel"><div id="fig_price" style="height:400px"></div></div>
+
+<div class="eyebrow">Midpoint assumption</div>
+<h2>TRDPRC_1 vs (BID+ASK)/2</h2>
+<p class="note" id="scatter_note"></p>
+<div class="grid2">
+  <div class="panel"><div id="fig_scatter" style="height:460px"></div></div>
+  <div class="panel"><div id="scatter_stats"></div></div>
+</div>
+
+<div class="eyebrow">Blotter</div>
+<h2>Trades I actually booked</h2>
+<p class="note" id="blotter_note"></p>
+<div class="tablewrap"><table id="blotter"><thead><tr>
+  <th>Time (ET)</th><th>Instrument</th><th>Side</th><th class="num">Qty</th><th class="num">Limit</th><th class="num">Fill</th><th class="num">Cash &Delta;</th><th>Notes</th>
+</tr></thead><tbody></tbody></table></div>
+
+<h2>Contracts written</h2>
+<p class="note">Every short call in the blotter: one row per contract, with the OCC symbol under the RIC, moneyness at entry, the quote the fill came from, and how it ended.</p>
+<div class="tablewrap"><table id="written"><thead><tr>
+  <th>Week</th><th>Contract</th><th>Expiry</th><th class="num">Strike</th><th class="num">vs spot</th><th class="num">Bid / Ask</th><th class="num">Mid (fill)</th>
+  <th class="num">Premium</th><th class="num">Expiry close</th><th>Outcome</th>
+</tr></thead><tbody></tbody></table></div>
+
+<h2>Week log</h2>
+<p class="note">Every ISO week in the tape, including the ones where no call was written. Skipped weeks are not trades and are deliberately not in the blotter.</p>
+<div class="tablewrap"><table id="weeks"><thead><tr>
+  <th>Week</th><th>Entry day</th><th>Expiry</th><th class="num">Spot</th><th class="num">Strike</th><th class="num">Mid</th><th>Result</th><th>Stock bought</th><th class="num">Shares after</th><th>Reason / note</th>
+</tr></thead><tbody></tbody></table></div>
+
+<div class="eyebrow">Ledger</div>
+<h2>Position, cash and margin over time</h2>
+<p class="note">Derived only from the blotter. Marks at each session close. Short calls are negative MV; * = stale option mark (no usable quote in the final bar).
+  Negative available funds are highlighted.</p>
+<div class="tablewrap"><table id="ledger"><thead><tr>
+  <th>Date</th><th class="num">Cash</th><th class="num">Shares</th><th>Short call</th><th class="num">Spot</th><th class="num">LMV</th><th class="num">Opt MV</th>
+  <th class="num">NAV</th><th class="num">Initial</th><th class="num">Maint</th><th class="num">Available</th><th class="num">Excess</th>
+</tr></thead><tbody></tbody></table></div>
+
+<div class="eyebrow">Write-up</div>
+<h2>Numbers behind the write-up</h2>
+<ul class="facts" id="facts"></ul>
+<h2>Commentary</h2>
+<div class="commentary" id="commentary"></div>
+
+<h2>Verification</h2>
+<details><summary id="checks_summary"></summary><div id="checks"></div></details>
+
+<div class="footer" id="footer"></div>
+
+<script>
+const B = window.BOOK;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const usd = (x, d=0) => (x == null) ? '' : (x < 0 ? '-' : '') + '$' + Math.abs(x).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
+const num = (x, d=2) => (x == null) ? '' : Number(x).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
+const cls = (x) => x > 0 ? 'pos' : (x < 0 ? 'neg' : 'mute');
+
+const AMBER='#f5a623', CORAL='#ff5d73', VIOLET='#7c5cff', GREEN='#3ddc97', SOFT='#cfc9e0', GRID='#232a45', PANEL='#12172a';
+function baseLayout(extra) {
+  return Object.assign({
+    paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:PANEL, font:{color:SOFT, family:'Segoe UI, system-ui, sans-serif'},
+    margin:{l:70, r:25, t:40, b:55}, hovermode:'x unified', hoverlabel:{bgcolor:'#0b0e1a', bordercolor:GRID, font:{color:'#e8e6f0'}},
+    legend:{orientation:'h', y:-0.18}, xaxis:{gridcolor:GRID, zerolinecolor:GRID}, yaxis:{gridcolor:GRID, zerolinecolor:GRID}
+  }, extra || {});
+}
+const CFG = {responsive:true, displaylogo:false};
+
+// ---------- header, banner, cards
+$('title').textContent = B.meta.ticker + ' \u00b7 COVERED CALL BOOK';
+$('subtitle').textContent = 'Friday weeklies \u00b7 100 shares + 1 short call \u00b7 wait through expiry \u00b7 ' + B.meta.first_date + ' to ' + B.meta.last_date +
+  ' \u00b7 static snapshot, no live LSEG connection';
+if (B.meta.synthetic) $('banner').innerHTML = '<div class="banner">SYNTHETIC DATA: this is a pipeline dry run on a made-up tape. Do not submit this page.</div>';
+$('cards').innerHTML = B.cards.map(c => `<div class="stat-card"><div class="lbl">${esc(c.label)}</div><div class="val">${esc(c.value)}</div><div class="sub2">${esc(c.sub)}</div></div>`).join('');
+
+// ---------- rules
+$('rules').innerHTML = B.rules.map(r => `<div class="rule"><span class="rid">${esc(r.id)}</span><span class="rt">${esc(r.title)}</span><p>${esc(r.text)}</p></div>`).join('');
+
+// ---------- NAV / margin
+(function() {
+  const n = B.nav;
+  const cd = n.dates.map((d, i) => [n.cash[i], n.shares[i], n.spot[i], n.call[i] || 'no call', n.available[i], n.stale[i]]);
+  const traces = [
+    {x:n.dates, y:n.nav, name:'NAV', mode:'lines+markers', line:{color:AMBER, width:4}, marker:{size:6}, customdata:cd,
+     hovertemplate:'NAV $%{y:,.0f}<br>cash $%{customdata[0]:,.0f} \u00b7 %{customdata[1]} sh @ $%{customdata[2]:.2f}<br>%{customdata[3]}<br>available $%{customdata[4]:,.0f}<extra></extra>'},
+    {x:n.dates, y:n.initial, name:'Initial margin (50% LMV)', mode:'lines', line:{color:VIOLET, width:3, dash:'dash'}, hovertemplate:'initial $%{y:,.0f}<extra></extra>'},
+    {x:n.dates, y:n.maint, name:'Maintenance (25% LMV)', mode:'lines', line:{color:CORAL, width:3, dash:'dash'}, hovertemplate:'maintenance $%{y:,.0f}<extra></extra>'},
+    {x:n.dates, y:n.bh, name:'Hold 100 shares, no calls', mode:'lines', line:{color:'#8a8fa8', width:2.5, dash:'dot'}, hovertemplate:'buy & hold NAV $%{y:,.0f}<extra></extra>'}
+  ];
+  Plotly.newPlot('fig_nav', traces, baseLayout({title:{text:'NAV vs Reg T requirements', font:{size:14}},
+    yaxis:{gridcolor:GRID, tickprefix:'$', tickformat:',.0f'}, xaxis:{gridcolor:GRID, type:'date', rangebreaks:[{bounds:['sat','mon']}].concat(B.holidays.length ? [{values:B.holidays}] : [])}}), CFG);
+
+  const t2 = [
+    {x:n.dates, y:n.available, name:'Available funds (NAV - initial)', mode:'lines+markers', line:{color:GREEN, width:3.5}, marker:{size:5}, hovertemplate:'available $%{y:,.0f}<extra></extra>'},
+    {x:n.dates, y:n.excess, name:'Excess equity (NAV - maintenance)', mode:'lines', line:{color:'#ffd27a', width:3}, hovertemplate:'excess $%{y:,.0f}<extra></extra>'}
+  ];
+  Plotly.newPlot('fig_avail', t2, baseLayout({title:{text:'Available funds and excess equity (below 0 = could not add risk / margin call)', font:{size:14}},
+    yaxis:{gridcolor:GRID, zeroline:true, zerolinecolor:CORAL, zerolinewidth:2, tickprefix:'$', tickformat:',.0f'},
+    xaxis:{gridcolor:GRID, type:'date', rangebreaks:[{bounds:['sat','mon']}].concat(B.holidays.length ? [{values:B.holidays}] : [])}}), CFG);
+})();
+
+// ---------- price + strikes
+(function() {
+  const P = B.price;
+  const traces = [{x:P.ts, y:P.last, name:'Stock (hourly last)', mode:'lines', line:{color:SOFT, width:2}, hovertemplate:'$%{y:.2f}<extra>stock</extra>'}];
+  [['EXPIRED', GREEN, 'Call expired (OTM)'], ['ASSIGNED', CORAL, 'Call assigned (ITM)']].forEach(([o, color, name]) => {
+    const xs = [], ys = [], tx = [];
+    B.segments.filter(s => s.outcome === o).forEach(s => {
+      const label = `week ${s.week}: strike ${s.strike} \u00b7 expiry close ${s.close.toFixed(2)} \u00b7 ${o}`;
+      xs.push(s.t0, s.t1, null); ys.push(s.strike, s.strike, null); tx.push(label, label, '');
+    });
+    traces.push({x:xs, y:ys, text:tx, name:name, mode:'lines', connectgaps:false, line:{color:color, width:5}, hovertemplate:'%{text}<extra></extra>'});
+  });
+  const rb = [{bounds:['sat','mon']}, {pattern:'hour', bounds:[16.05, 9.95]}].concat(B.holidays.length ? [{values:B.holidays}] : []);
+  Plotly.newPlot('fig_price', traces, baseLayout({hovermode:'closest', title:{text:'Stock vs short-call strikes', font:{size:14}},
+    xaxis:{gridcolor:GRID, type:'date', rangebreaks:rb}, yaxis:{gridcolor:GRID, tickprefix:'$'}}), CFG);
+})();
+
+// ---------- scatter
+(function() {
+  const S = B.scatter, st = S.stats || {};
+  const note = st.n_used ? `Near-the-money calls (|strike/spot - 1| <= ${(st.ntm_band*100).toFixed(0)}%), hourly bars with BOTH a trade print (TRDPRC_1) and a usable bid/ask. ` +
+    `Same usable-quote rule as the fills. The dashed line is print = mid; the coral line is the OLS fit.` : 'Not enough data to draw the scatter.';
+  $('scatter_note').textContent = note;
+  if (st.n_used) {
+    const xs = S.x, ys = S.y;
+    const lo = Math.min(...xs), hi = Math.max(...xs);
+    const cd = xs.map((x, i) => [S.ric[i], S.ts[i], S.bid[i], S.ask[i], S.strike[i]]);
+    const traces = [
+      {x:xs, y:ys, customdata:cd, name:'bar', mode:'markers', type: xs.length > 4000 ? 'scattergl' : 'scatter', marker:{color:AMBER, size:6, opacity:0.55},
+       hovertemplate:'mid $%{x:.2f} \u00b7 print $%{y:.2f}<br>bid %{customdata[2]:.2f} / ask %{customdata[3]:.2f}<br>strike %{customdata[4]} \u00b7 %{customdata[1]}<br>%{customdata[0]}<extra></extra>'},
+      {x:[lo, hi], y:[lo, hi], name:'print = mid', mode:'lines', line:{color:'#8a8fa8', width:2, dash:'dash'}, hoverinfo:'skip'},
+      {x:[lo, hi], y:[st.intercept + st.slope*lo, st.intercept + st.slope*hi], name:`OLS fit (R\u00b2 = ${st.r2.toFixed(4)})`, mode:'lines', line:{color:CORAL, width:4}, hoverinfo:'skip'}
+    ];
+    Plotly.newPlot('fig_scatter', traces, baseLayout({hovermode:'closest', title:{text:`TRDPRC_1 vs mid \u00b7 R\u00b2 = ${st.r2.toFixed(4)}`, font:{size:14}},
+      xaxis:{title:'MID = (BID + ASK) / 2', gridcolor:GRID, tickprefix:'$'}, yaxis:{title:'TRDPRC_1', gridcolor:GRID, tickprefix:'$'}}), CFG);
+    const row = (k, v) => `<tr><td>${k}</td><td class="num">${v}</td></tr>`;
+    const bk = Object.entries(st.buckets || {}).map(([k, v]) => row(esc(k), `n=${v.n} \u00b7 median |gap| ${v.median_abs_gap == null ? 'n/a' : '$' + v.median_abs_gap.toFixed(3)}`)).join('');
+    $('scatter_stats').innerHTML = '<table><tbody>' +
+      row('Points used', st.n_used.toLocaleString()) + row('Slope', st.slope.toFixed(4)) + row('Intercept', st.intercept.toFixed(4)) +
+      row('R\u00b2 (price levels)', st.r2.toFixed(4)) + row('R\u00b2 (time value = price - intrinsic)', st.r2_time_value.toFixed(4)) +
+      row('Median |print - mid|', '$' + st.median_abs_gap.toFixed(3)) + row('90th pct |print - mid|', '$' + st.p90_abs_gap.toFixed(3)) +
+      row('Mean (print - mid)', '$' + st.mean_gap.toFixed(3)) + row('Median quoted spread', '$' + st.median_spread.toFixed(3)) +
+      row('Prints inside bid/ask', st.pct_inside_spread.toFixed(1) + '%') +
+      row('Median |gap| / half-spread', st.median_gap_over_halfspread == null ? 'n/a' : st.median_gap_over_halfspread.toFixed(2)) +
+      row('Prints dropped (unusable quote)', st.n_dropped_invalid.toLocaleString()) +
+      row('Near-the-money bars with a usable quote', st.pct_ntm_valid_quote.toFixed(1) + '%') +
+      row('Near-the-money bars with a print', st.pct_ntm_trade.toFixed(1) + '%') + bk + '</tbody></table>' +
+      '<p class="note">R\u00b2 on price levels is inflated because option prices differ mostly by strike; slope near 1, intercept near 0 and the share of prints inside the quoted spread are the real evidence for filling at mid.</p>';
+  } else {
+    $('scatter_stats').innerHTML = '<p class="note">No scatter statistics.</p>';
+  }
+})();
+
+// ---------- blotter
+(function() {
+  const rows = B.blotter;
+  const cnt = (f) => rows.filter(f).length;
+  $('blotter_note').textContent = `${rows.length} rows: ${cnt(r=>r.kind==='OPT'&&r.side==='SELL')} calls sold, ${cnt(r=>r.side==='EXPIRE')} EXPIRE, ${cnt(r=>r.side==='ASSIGN')} ASSIGN, ` +
+    `${cnt(r=>r.kind==='STK'&&r.side==='BUY')} stock BUY, ${cnt(r=>r.kind==='STK'&&r.side==='SELL')} stock SELL. Option fills at mid; stock at the entry bar's last print; ` +
+    `EXPIRE at 0.00; ASSIGN at the strike with the shares sold at the strike. Notes cite the rule (R1..R5) that fired. Working orders and skipped weeks are not here.`;
+  const html = rows.map(r => {
+    const inst = r.kind === 'OPT' ? `<span class="ric">${esc(r.instrument)}</span><div class="sub-ric">${esc(r.occ)}</div>` : `<span class="ric">${esc(r.instrument)}</span><div class="sub-ric">stock</div>`;
+    const lim = r.limit != null ? num(r.limit, 3) : (r.kind === 'STK' && r.side === 'BUY' ? '<span class="mute">print</span>' : '<span class="mute">\u2014</span>');
+    const cash = r.cash_delta === 0 ? '<span class="mute">0.00</span>' : `<span class="${cls(r.cash_delta)}">${usd(r.cash_delta, 2)}</span>`;
+    return `<tr><td style="white-space:nowrap">${esc(r.time)}</td><td>${inst}</td><td><span class="badge b-${r.side}">${r.side}</span></td><td class="num">${r.qty}</td>` +
+           `<td class="num">${lim}</td><td class="num">${num(r.fill, r.kind==='OPT' ? 3 : 2)}</td><td class="num">${cash}</td><td class="notecell">${esc(r.note)}</td></tr>`;
+  }).join('');
+  document.querySelector('#blotter tbody').innerHTML = html;
+})();
+
+// ---------- contracts written
+(function() {
+  const html = B.written.map(w => {
+    const out = `<span class="badge b-${w.outcome === 'ASSIGNED' ? 'ASSIGN' : 'EXPIRE'}">${w.outcome}</span>`;
+    return `<tr><td>${esc(w.week)}</td><td><span class="ric">${esc(w.ric)}</span><div class="sub-ric">${esc(w.occ)}</div></td><td>${esc(w.expiry)}</td>` +
+           `<td class="num">${num(w.strike, 2)}</td><td class="num">${(w.moneyness * 100 >= 0 ? '+' : '') + (w.moneyness * 100).toFixed(2)}%</td>` +
+           `<td class="num">${num(w.bid, 2)} / ${num(w.ask, 2)}</td><td class="num">${num(w.mid, 3)}</td><td class="num pos">${usd(w.premium, 2)}</td>` +
+           `<td class="num">${num(w.expiry_close, 2)}</td><td>${out}</td></tr>`;
+  }).join('');
+  document.querySelector('#written tbody').innerHTML = html;
+})();
+
+// ---------- week log
+(function() {
+  const html = B.weeks.map(w => {
+    const res = w.status === 'TRADED' ? `<span class="badge b-${w.outcome === 'ASSIGNED' ? 'ASSIGN' : 'EXPIRE'}">${w.outcome}</span>` : '<span class="badge b-SKIPPED">SKIPPED</span>';
+    const note = w.status === 'SKIPPED' ? esc(w.reason) : esc(w.reg_t_note || '');
+    return `<tr><td>${esc(w.trd_prd)}</td><td>${esc(w.first_session)}</td><td>${esc(w.expiry)}</td><td class="num">${w.spot == null ? '' : num(w.spot, 2)}</td>` +
+           `<td class="num">${w.strike == null ? '' : num(w.strike, 2)}</td><td class="num">${w.mid == null ? '' : num(w.mid, 3)}</td><td>${res}</td>` +
+           `<td>${w.status === 'TRADED' ? (w.bought_stock ? 'yes' : 'no (held)') : ''}</td><td class="num">${w.shares_end}</td>` +
+           `<td class="notecell">${note}${w.status === 'SKIPPED' && w.uncovered ? ' <span class="neg">(shares held, no call: uncovered week)</span>' : ''}</td></tr>`;
+  }).join('');
+  document.querySelector('#weeks tbody').innerHTML = html;
+})();
+
+// ---------- ledger
+(function() {
+  const html = B.ledger.map(r => {
+    const av = `<span class="${r.avail_neg ? 'neg' : ''}" ${r.avail_neg ? 'style="font-weight:700"' : ''}>${usd(r.available, 0)}</span>`;
+    return `<tr><td style="white-space:nowrap">${esc(r.date)}</td><td class="num ${cls(r.cash)}">${usd(r.cash, 0)}</td><td class="num">${r.shares}</td>` +
+           `<td>${esc(r.short_call) || '<span class="mute">none</span>'}</td><td class="num">${num(r.spot, 2)}</td><td class="num">${usd(r.lmv, 0)}</td>` +
+           `<td class="num">${r.opt_mv ? usd(r.opt_mv, 0) : '<span class="mute">0</span>'}${r.mark_stale ? '*' : ''}</td><td class="num"><b>${usd(r.nav, 0)}</b></td>` +
+           `<td class="num">${usd(r.initial, 0)}</td><td class="num">${usd(r.maint, 0)}</td><td class="num">${av}</td><td class="num">${usd(r.excess, 0)}</td></tr>`;
+  }).join('');
+  document.querySelector('#ledger tbody').innerHTML = html;
+})();
+
+// ---------- facts, commentary, checks
+$('facts').innerHTML = B.facts.map(f => `<li>${esc(f)}</li>`).join('');
+$('commentary').innerHTML = B.commentary.map(c => {
+  const body = c.draft ? '<div class="todo">Not written yet: add this section to commentary.json and rebuild.</div>' :
+    c.text.split(/\n\s*\n/).map(p => `<p>${esc(p)}</p>`).join('');
+  return `<p><strong>${esc(c.title)}.</strong></p>${body}`;
+}).join('');
+const failed = B.checks.filter(c => !c.ok).length;
+$('checks_summary').textContent = failed ? `${failed} verification checks FAILED` : `All ${B.checks.filter(c => !c.name.startsWith('INFO')).length} verification checks passed (click to expand)`;
+$('checks').innerHTML = B.checks.map(c => `<div class="chk"><b class="${c.ok ? 'pos' : 'neg'}">${c.ok ? 'PASS' : 'FAIL'}</b> ${esc(c.name)}${c.detail ? ' <span class="mute">[' + esc(c.detail) + ']</span>' : ''}</div>`).join('');
+$('footer').textContent = 'Built ' + B.meta.generated_at + ' \u00b7 data pulled from LSEG Workspace ' + B.meta.fetched_at + ' \u00b7 all numbers baked into book.js; this page makes no live data calls.';
+</script>
+</body>
+</html>
